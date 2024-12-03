@@ -8,20 +8,24 @@ from langchain_community.vectorstores.neo4j_vector import Neo4jVector
 neo4jvector = Neo4jVector.from_existing_index(
     embeddings,                              # (1)
     graph=graph,                             # (2)
-    index_name="moviePlots",                 # (3)
-    node_label="Movie",                      # (4)
-    text_node_property="plot",               # (5)
-    embedding_node_property="plotEmbedding", # (6)
+    index_name="courseSearch",                 # (3)
+    node_label="Course",                      # (4)
+    text_node_property="description",               # (5)
+    embedding_node_property="descriptionEmbedding", # (6)
     retrieval_query="""
 RETURN
-    node.plot AS text,
+    node.description AS text,
     score,
     {
+        course_id: node.course_id,
         title: node.title,
-        directors: [ (person)-[:DIRECTED]->(node) | person.name ],
-        actors: [ (person)-[r:ACTED_IN]->(node) | [person.name, r.role] ],
-        tmdbId: node.tmdbId,
-        source: 'https://www.themoviedb.org/movie/'+ node.tmdbId
+        units: node.units,
+        prerequisites: [ (og:OrGroup)-[:REQUIRED]->(node) | 
+            [ (c:Course)-[:INCLUDED_IN]->(og) | c.course_id ] 
+        ],
+        required_for: [ (milestone:Milestone)-[:REQUIRES]->(og:OrGroup)-[:REQUIRED]->(node) | 
+            milestone.milestone_id
+        ]
     } AS metadata
 """
 )

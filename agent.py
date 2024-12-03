@@ -16,37 +16,50 @@ from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
 
-from tools.vector import get_movie_plot
+#from tools.vector import get_movie_plot
 from tools.cypher import cypher_qa
+from tools.db_retriever import (get_course_info, get_prerequisites)
+
+from pydantic import BaseModel
 
 # Create a course chat chain
 chat_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are a movie expert providing information about movies."),
+        ("system", "You are a UCSD course advisor providing information about course planning."),
         ("human", "{input}"),
     ]
 )
 
 course_chat = chat_prompt | llm | StrOutputParser()
 
+class PrerequisiteInput(BaseModel):
+    course_id: str
+
 # Create a set of tools
 tools = [
     Tool.from_function(
         name="General Chat",
-        description="For general movie chat not covered by other tools",
+        description="For general course knowledge not covered by other tools",
         func=course_chat.invoke,
     ), 
     Tool.from_function(
-        name="Movie Plot Search",  
-        description="For when you need to find information about movies based on a plot",
-        func=get_movie_plot, 
+        name="Course information",
+        description="Provide information about course questions using Cypher",
+        func = cypher_qa,
     ), 
     Tool.from_function(
-        name="Movie information",
-        description="Provide information about movies questions using Cypher",
-        func = cypher_qa
+        name="Gets immediate prerequisites",
+        description="Retrieves immediate prerequisite courses for given course_id from Neo4j database",
+        func=get_prerequisites,
+        args_schema=PrerequisiteInput,
     )
 ]
+
+unused_tool = """Tool.from_function(
+        name="Course Description Search",  
+        description="For when you need to find information about course content based on a description",
+        func=get_movie_plot, 
+    ), """
 
 # Create chat history callback
 def get_memory(session_id):
@@ -54,11 +67,11 @@ def get_memory(session_id):
 
 # Create the agent
 agent_prompt = PromptTemplate.from_template("""
-You are a movie expert providing information about movies.
+You are an expert UCSD college course advisor providing information about UCSD courses.
 Be as helpful as possible and return as much information as possible.
 Do not answer any questions using your pre-trained knowledge, only use the information provided in the context.
 
-Do not answer any questions that do not relate to movies, actors or directors.
+Do not answer any questions that do not relate to course planning or requirements inquiry.
 TOOLS:
 ------
 
