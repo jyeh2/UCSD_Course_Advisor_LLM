@@ -18,10 +18,11 @@ from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
 
-#from tools.vector import get_movie_plot
-#from tools.vector import get_movie_plot
+
 from tools.cypher import cypher_qa
 from tools.db_retriever import (get_course_info, get_prerequisites)
+#from tools.vector import get_movie_plot
+#from tools.pdf_reader import pdf_qa_tool
 
 from pydantic import BaseModel
 
@@ -58,11 +59,18 @@ tools = [
     )
 ]
 
-unused_tool = """Tool.from_function(
+unused_tool = """
+    Tool.from_function(
+        name="PDF Course Catalog Search",
+        description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
+        func=pdf_qa_tool,
+    ),
+    Tool.from_function(
         name="Course Description Search",  
         description="For when you need to find information about course content based on a description",
         func=get_movie_plot, 
-    ), """
+    ),
+"""
 
 # Create chat history callback
 def get_memory(session_id):
