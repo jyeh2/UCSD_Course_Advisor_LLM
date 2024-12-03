@@ -12,17 +12,20 @@ from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 
+
+
 from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
 
-from tools.vector import get_movie_plot
+#from tools.vector import get_movie_plot
 from tools.cypher import cypher_qa
+
 
 # Create a course chat chain
 chat_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are a movie expert providing information about movies."),
+        ("system", "You are a UCSD course scheduler who provides professional course selection guidance."),
         ("human", "{input}"),
     ]
 )
@@ -33,19 +36,19 @@ course_chat = chat_prompt | llm | StrOutputParser()
 tools = [
     Tool.from_function(
         name="General Chat",
-        description="For general movie chat not covered by other tools",
+        description="For general course chat not covered by other tools",
         func=course_chat.invoke,
-    ), 
+    ),
     Tool.from_function(
-        name="Movie Plot Search",  
-        description="For when you need to find information about movies based on a plot",
-        func=get_movie_plot, 
-    ), 
-    Tool.from_function(
-        name="Movie information",
-        description="Provide information about movies questions using Cypher",
+        name="Course Graph information",
+        description="Provide information about course relationships questions using Cypher",
         func = cypher_qa
-    )
+    ),
+    Tool.from_function(
+        name="Course General Information",
+        description="Retrieve course information from a PDF knowledge base",
+        func=pdf_qa_tool,
+    ),
 ]
 
 # Create chat history callback
@@ -54,12 +57,15 @@ def get_memory(session_id):
 
 # Create the agent
 agent_prompt = PromptTemplate.from_template("""
-You are a movie expert providing information about movies.
+You are a UCSD courses expert providing information about course planning.
 Be as helpful as possible and return as much information as possible.
 Do not answer any questions using your pre-trained knowledge, only use the information provided in the context.
+If not context is given, say you do not know.
 
-Do not answer any questions that do not relate to movies, actors or directors.
+Do not answer any questions that do not relate to UCSD courses. Only answer courses related questions using context.
+
 TOOLS:
+
 ------
 
 You have access to the following tools:
@@ -96,6 +102,7 @@ agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     verbose=True
+
     )
 
 chat_agent = RunnableWithMessageHistory(
@@ -103,6 +110,7 @@ chat_agent = RunnableWithMessageHistory(
     get_memory,
     input_messages_key="input",
     history_messages_key="chat_history",
+
 )
 
 # Create a handler to call the agent
