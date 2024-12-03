@@ -2,6 +2,8 @@
 
 This RAG finetuned chatbot will serve in place of a academic advisor, and provide any details relevant to the MATH-CS major at University of California, San Diego.
 
+Most of the data processing, as well as the processing is done in the jupyternote-book file. 
+
 This repository accompanies the link:https://graphacademy.neo4j.com/courses/llm-chatbot-python/?ref=github[Build an Neo4j-backed Chatbot using Python^] course on link:https://graphacademy.neo4j.com/?ref=github[Neo4j GraphAcademy^].
 
 == Setup
