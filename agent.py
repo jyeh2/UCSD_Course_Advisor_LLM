@@ -12,10 +12,13 @@ from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 
+
+
 from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
 
+#from tools.vector import get_movie_plot
 #from tools.vector import get_movie_plot
 from tools.cypher import cypher_qa
 from tools.db_retriever import (get_course_info, get_prerequisites)
@@ -25,7 +28,7 @@ from pydantic import BaseModel
 # Create a course chat chain
 chat_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are a UCSD course advisor providing information about course planning."),
+        ("system", "You are a UCSD course scheduler who provides professional course selection guidance."),
         ("human", "{input}"),
     ]
 )
@@ -41,7 +44,7 @@ tools = [
         name="General Chat",
         description="For general course knowledge not covered by other tools",
         func=course_chat.invoke,
-    ), 
+    ),
     Tool.from_function(
         name="Course information",
         description="Provide information about course questions using Cypher",
@@ -70,9 +73,12 @@ agent_prompt = PromptTemplate.from_template("""
 You are an expert UCSD college course advisor providing information about UCSD courses.
 Be as helpful as possible and return as much information as possible.
 Do not answer any questions using your pre-trained knowledge, only use the information provided in the context.
+If not context is given, say you do not know.
 
-Do not answer any questions that do not relate to course planning or requirements inquiry.
+Do not answer any questions that do not relate to UCSD courses. Only answer courses related questions using context.
+
 TOOLS:
+
 ------
 
 You have access to the following tools:
@@ -109,6 +115,7 @@ agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     verbose=True
+
     )
 
 chat_agent = RunnableWithMessageHistory(
@@ -116,6 +123,7 @@ chat_agent = RunnableWithMessageHistory(
     get_memory,
     input_messages_key="input",
     history_messages_key="chat_history",
+
 )
 
 # Create a handler to call the agent

@@ -5,7 +5,7 @@ from graph import graph
 from langchain.prompts.prompt import PromptTemplate
 
 CYPHER_GENERATION_TEMPLATE = """
-You are an expert Neo4j Developer translating user questions into Cypher to answer questions about movies and provide recommendations.
+You are an expert Neo4j Developer translating user questions into Cypher to answer questions about UCSD courses and provide recommendations.
 Convert the user's question based on the schema.
 
 Use only the provided relationship types and properties in the schema.
@@ -15,7 +15,14 @@ Do not return entire nodes or embedding properties.
 
 Fine Tuning:
 
-For movie titles that begin with "The", move "the" to the end. For example "The 39 Steps" becomes "39 Steps, The" or "the matrix" becomes "Matrix, The".
+For any recommendation question, just return all courses, no condition is needed.
+For any question about a course, query the course in the graph for context.
+Use all properties in the schema to answer the question.
+
+only use milestone data for major requirements.
+
+
+
 
 
 Schema:

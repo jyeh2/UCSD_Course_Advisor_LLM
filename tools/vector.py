@@ -49,13 +49,13 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# Create the chain 
+# Create the chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
 plot_retriever = create_retrieval_chain(
-    retriever, 
+    retriever,
     question_answer_chain
 )
 
