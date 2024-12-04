@@ -53,7 +53,7 @@ tools = [
     ), 
     Tool.from_function(
         name="Gets immediate prerequisites",
-        description="Retrieves immediate prerequisite courses for given course_id from Neo4j database",
+        description="Accurately retrieves immediate prerequisite courses for given course_id from Neo4j database",
         func=get_prerequisites,
         args_schema=PrerequisiteInput,
     )
@@ -61,15 +61,15 @@ tools = [
 
 unused_tool = """
     Tool.from_function(
-        name="PDF Course Catalog Search",
-        description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
-        func=pdf_qa_tool,
-    ),
-    Tool.from_function(
         name="Course Description Search",  
         description="For when you need to find information about course content based on a description",
         func=get_movie_plot, 
     ),
+    Tool.from_function(
+        name="PDF Course Catalog Search",
+        description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
+        func=pdf_qa_tool,
+    )
 """
 
 # Create chat history callback
@@ -80,10 +80,14 @@ def get_memory(session_id):
 agent_prompt = PromptTemplate.from_template("""
 You are an expert UCSD college course advisor providing information about UCSD courses.
 Be as helpful as possible and return as much information as possible.
-Do not answer any questions using your pre-trained knowledge, only use the information provided in the context.
-If not context is given, say you do not know.
 
-Do not answer any questions that do not relate to UCSD courses. Only answer courses related questions using context.
+Some basic information about UCSD courses to make you more informed:
+- Course id take the form like 'MATH 18' or 'MATH 20C', with all CAPs and space in between department and code.
+
+Maximize the use of the accurate retrieval tools; if failed, reflect on why it failed, and then assess what other tools to use.
+Refrain from using your existing pretrained knowledge unless all relevant tools reach empty results. 
+
+Do not answer any questions that do not relate to course planning or UCSD advising.
 
 TOOLS:
 
@@ -140,9 +144,13 @@ def generate_response(user_input):
     Create a handler that calls the Conversational agent
     and returns a response to be rendered in the UI
     """
-
-    response = chat_agent.invoke(
-        {"input": user_input},
-        {"configurable": {"session_id": get_session_id()}},)
-
-    return response['output']
+    try:
+        response = chat_agent.invoke(
+            {"input": user_input},
+            {"configurable": {"session_id": get_session_id()}},
+        )
+        return response['output']
+    except Exception as e:
+        # Log the error if you have logging set up
+        print(f"Error occurred: {str(e)}")
+        return "I apologize, but I encountered an error processing your request. Please try rephrasing your question or ask something else."
