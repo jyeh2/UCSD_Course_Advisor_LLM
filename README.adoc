@@ -1,19 +1,31 @@
-= Build an Neo4j-backed Chatbot using Python
+= Building an Neo4j-backed Course Advisor using Python
+
+This RAG finetuned chatbot will serve in place of a academic advisor, and provide any details relevant to the MATH-CS major at University of California, San Diego.
+
+Most of the data processing, as well as the processing is done in the jupyternote-book file. 
 
 This repository accompanies the link:https://graphacademy.neo4j.com/courses/llm-chatbot-python/?ref=github[Build an Neo4j-backed Chatbot using Python^] course on link:https://graphacademy.neo4j.com/?ref=github[Neo4j GraphAcademy^].
 
-For a complete walkthrough of this repository, link:https://graphacademy.neo4j.com/courses/llm-chatbot-python/?ref=github[enrol now^].
-
-
-== Running the application
+== Setup
+If you are UCSD affilated, the data files should be accompanied in gradescope, as well as the tokens requried to access the database
+Unzip the data folder and put it in the home directory
+Find ```secrets.toml``` file and put it in the folder streamlit.py
 
 To run the application, you must install the libraries listed in `requirements.txt`.
 
 [source,sh]
 pip install -r requirements.txt
 
+== Populating the Database
+If you are not UCSD affilated, and is trying to set up the project. 
+Please contact me in private for DATA files required to populate the neo4j database, and run the finetuning process.
+You will need to supply your own tokens :( 
 
-Then run the `streamlit run` command to start the app on link:http://localhost:8501/[http://localhost:8501/^].
+== Running the application
+Run `streamlit run` command to start the app on link:http://localhost:8501/[http://localhost:8501/^].
 
 [source,sh]
 streamlit run bot.py
+
+
+
