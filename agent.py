@@ -96,7 +96,12 @@ tools = [
         name="PDF Course Catalog Search",
         description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
         func=pdf_qa_tool,
-    )
+    ),
+    Tool.from_function(
+        name="Major Requirement",
+        description="Provided required courses to complete in order to graduate for a major",
+        func=get_courses_by_milestone,
+    ),
 ]
 
 unused_tool = """

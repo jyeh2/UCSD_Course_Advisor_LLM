@@ -96,6 +96,65 @@ def iterative_get_prerequisites(course_id):
     
     return '\n'.join(prereqs)
 
+def get_courses_by_milestone(dummy=None):
+    # Cypher query to get course IDs grouped by milestone titles
+    query_courses = """
+        MATCH (c:Course)-[:INCLUDED_IN]->(m: Milestone)
+        RETURN m.milestone_id AS milestone_id, 
+               m.title AS title, 
+               collect(c.course_id) AS course_ids
+        ORDER BY m.milestone_id
+    """
+    query_orgroups = """
+        MATCH (m:Milestone)<-[:INCLUDED_IN]-(og:OrGroup)<-[:REQUIRED]-(c:Course)
+        WITH 
+            m.milestone_id AS milestone_id, 
+            m.title AS title,
+            og.group_id AS or_group_id, 
+            collect(c.course_id) AS courses
+        WITH 
+            milestone_id, 
+            title, 
+            collect(courses) AS grouped_courses
+        RETURN 
+            milestone_id, 
+            title, 
+            grouped_courses
+        ORDER BY milestone_id
+        """
+    
+    result_courses = graph.query(query_courses)
+    result_orgroups = graph.query(query_orgroups)
+
+    
+    formatted_results = {}
+
+    # Process direct courses
+    for record in result_courses:
+        title = record["title"]
+        courses = record["course_ids"]
+
+        # Initialize the title if not present
+        if title not in formatted_results:
+            formatted_results[title] = []
+
+        # Add direct courses to the list
+        formatted_results[title].extend(courses)
+
+    # Process grouped courses
+    for record in result_orgroups:
+        title = record["title"]
+        grouped_courses = record["grouped_courses"]
+
+        # Initialize the title if not present
+        if title not in formatted_results:
+            formatted_results[title] = []
+
+        # Add grouped courses (as lists) to the list
+        formatted_results[title].extend(grouped_courses)
+
+    return formatted_results
+
 def get_major_requirements(major_id):
     requirements = {}
 
