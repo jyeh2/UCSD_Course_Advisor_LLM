@@ -50,4 +50,4 @@ Answer: """)
 
 # Define a tool for retrieving answers from the PDF knowledge base
 def pdf_qa_tool(query):
-    return qa_chain.run(query)
+    return qa_chain.invoke(query)

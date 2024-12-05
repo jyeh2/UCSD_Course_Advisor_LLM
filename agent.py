@@ -14,6 +14,7 @@ from langchain import hub
 
 
 
+
 from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
@@ -21,8 +22,9 @@ from langchain_core.prompts import PromptTemplate
 
 from tools.cypher import cypher_qa
 from tools.db_retriever import (get_course_info, get_prerequisites)
-#from tools.vector import get_movie_plot
-#from tools.pdf_reader import pdf_qa_tool
+#from tools.vector import get_course_description
+from tools.pdf_reader import pdf_qa_tool
+
 
 from pydantic import BaseModel
 
@@ -39,11 +41,12 @@ course_chat = chat_prompt | llm | StrOutputParser()
 class PrerequisiteInput(BaseModel):
     course_id: str
 
+
 # Create a set of tools
 tools = [
     Tool.from_function(
         name="General Chat",
-        description="For general course knowledge not covered by other tools",
+        description="dont use",
         func=course_chat.invoke,
     ),
     Tool.from_function(
@@ -56,6 +59,11 @@ tools = [
         description="Accurately retrieves immediate prerequisite courses for given course_id from Neo4j database",
         func=get_prerequisites,
         args_schema=PrerequisiteInput,
+    ),
+     Tool.from_function(
+        name="PDF Course Catalog Search",
+        description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
+        func=pdf_qa_tool,
     )
 ]
 
@@ -63,7 +71,7 @@ unused_tool = """
     Tool.from_function(
         name="Course Description Search",  
         description="For when you need to find information about course content based on a description",
-        func=get_movie_plot, 
+        func=get_course_description, 
     ),
     Tool.from_function(
         name="PDF Course Catalog Search",
@@ -88,6 +96,7 @@ Maximize the use of the accurate retrieval tools; if failed, reflect on why it f
 Refrain from using your existing pretrained knowledge unless all relevant tools reach empty results. 
 
 Do not answer any questions that do not relate to course planning or UCSD advising.
+If General Chat is used, mention the info is beyond scope and may be inaccurate.
 
 TOOLS:
 
@@ -105,6 +114,7 @@ Action: the action to take, should be one of [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
 ```
+You may use multiple tools to assist your tasks.
 
 When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
 

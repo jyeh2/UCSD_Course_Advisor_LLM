@@ -8,7 +8,7 @@ from langchain_community.vectorstores.neo4j_vector import Neo4jVector
 neo4jvector = Neo4jVector.from_existing_index(
     embeddings,                              # (1)
     graph=graph,                             # (2)
-    index_name="courseSearch",                 # (3)
+    index_name="courseDescription",                # (3)
     node_label="Course",                      # (4)
     text_node_property="description",               # (5)
     embedding_node_property="descriptionEmbedding", # (6)
@@ -60,5 +60,5 @@ plot_retriever = create_retrieval_chain(
 )
 
 # Create a function to call the chain
-def get_movie_plot(input):
+def get_course_description(input):
     return plot_retriever.invoke({"input": input})

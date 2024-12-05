@@ -29,4 +29,7 @@ def get_prerequisites(course_id):
     prereqs = []
     for record in result:
         prereqs.append(record['prereq_courses'])
-    return prereqs
+    
+    #result = " and ".join([" or ".join(sublist) for sublist in prereqs])
+    
+    return result
