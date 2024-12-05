@@ -1,6 +1,6 @@
 import streamlit as st
-from llm import llm
 from graph import graph
+import re
 
 def get_course_info(course_id):
     query = """
@@ -16,7 +16,13 @@ def get_course_info(course_id):
         return result
     return None
 
-def get_prerequisites(course_id):
+def get_prerequisites(course_id, _ashelper=False):
+    # Double Checks for course_id format
+    course_id = course_id.strip().replace('`', '').split('\n')[0]
+    pattern = r'^[A-Z]+\s\d+[A-Z]*$'
+    if not re.match(pattern, course_id):
+        raise ValueError('Course ID must be in format like "MATH 18" or "MATH 20C"')
+
     query = """
         MATCH (c:Course {course_id: $course_id})
         MATCH (og:OrGroup)-[:REQUIRED]->(c)
@@ -26,10 +32,66 @@ def get_prerequisites(course_id):
         ORDER BY og.group_id
     """
     result = graph.query(query, params={"course_id": course_id})
-    prereqs = []
+    
+    if _ashelper:
+        return result
+    if not result:
+        return "This course has no prerequisites."
+    
+    prereq_groups = []
     for record in result:
-        prereqs.append(record['prereq_courses'])
+        courses = record['prereq_courses']
+        if len(courses) == 1:
+            prereq_groups.append(courses[0])
+        else:
+            prereq_groups.append(f"({' OR '.join(courses)})")
     
-    #result = " and ".join([" or ".join(sublist) for sublist in prereqs])
+    return "Prerequisites: " + " AND ".join(prereq_groups)
+
+def iterative_get_prerequisites(course_id):
+    # Double Checks for course_id format
+    course_id = course_id.strip().replace('`', '').split('\n')[0]
+    pattern = r'^[A-Z]+\s\d+[A-Z]*$'
+    if not re.match(pattern, course_id):
+        raise ValueError('Course ID must be in format like "MATH 18" or "MATH 20C"')
     
-    return result
+    prereq_tree = {}
+    to_process = {course_id}
+    processed = set()
+    prereqs = []
+
+    while to_process:
+        current_course = to_process.pop()
+        if current_course in processed:
+            continue
+            
+        result = get_prerequisites(current_course, _ashelper=True)
+        processed.add(current_course)
+        
+        if result:
+            prereq_tree[current_course] = []
+            subprereq_strings = []
+            for record in result:
+                group_id = record['group_id']
+                prereq_courses = record['prereq_courses']
+                
+                # If there's only one course in the group, don't create an OR group
+                if len(prereq_courses) == 1:
+                    prereq_tree[current_course].append(prereq_courses[0])
+                    subprereq_strings.append(f"({prereq_courses[0]})")
+                else:
+                    # Create an OR group
+                    prereq_tree[current_course].append({
+                        'type': 'OR',
+                        'courses': prereq_courses
+                    })
+                    subprereq_strings.append(f"({' or '.join(prereq_courses)})")
+                
+                # Add all prerequisites to processing queue
+                for prereq in prereq_courses:
+                    if prereq not in processed:
+                        to_process.add(prereq)
+                
+            prereqs.append(f"{current_course}: {' and '.join(subprereq_strings)}")
+    
+    return '\n'.join(prereqs)

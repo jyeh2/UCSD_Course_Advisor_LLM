@@ -21,12 +21,13 @@ from langchain_core.prompts import PromptTemplate
 
 
 from tools.cypher import cypher_qa
-from tools.db_retriever import (get_course_info, get_prerequisites)
+from tools.db_retriever import (get_course_info, get_prerequisites, iterative_get_prerequisites)
 #from tools.vector import get_course_description
 from tools.pdf_reader import pdf_qa_tool
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+import re
 
 # Create a course chat chain
 chat_prompt = ChatPromptTemplate.from_messages(
@@ -38,9 +39,19 @@ chat_prompt = ChatPromptTemplate.from_messages(
 
 course_chat = chat_prompt | llm | StrOutputParser()
 
-class PrerequisiteInput(BaseModel):
+class CourseIDInput(BaseModel):
     course_id: str
 
+    @field_validator('course_id')
+    @classmethod
+    def validate_course_id(cls, v):
+        # Pattern: Letters + space + numbers (optionally followed by a letter)
+        cleaned = v.strip().replace('`', '').split('\n')[0]
+        pattern = r'^[A-Z]+\s\d+[A-Z]*$'
+        if not re.match(pattern, cleaned):
+            raise ValueError('Course ID must be in format like "MATH 18" or "MATH 20C"')
+        print(f"VALIDATION OUTPUT:{cleaned}________")
+        return cleaned
 
 # Create a set of tools
 tools = [
@@ -55,12 +66,18 @@ tools = [
         func = cypher_qa,
     ), 
     Tool.from_function(
-        name="Gets immediate prerequisites",
-        description="Accurately retrieves immediate prerequisite courses for given course_id from Neo4j database",
+        name="(Accurate) Gets immediate prerequisites",
+        description="Accurately retrieves immediate prerequisite courses for given course_id from Neo4j database. Convert input course id into proper format before proceeding. ",
         func=get_prerequisites,
-        args_schema=PrerequisiteInput,
+        args_schema=CourseIDInput,
     ),
-     Tool.from_function(
+    Tool.from_function(
+        name="(Accurate) Iteratively retrieves ALL prerequisites",
+        description="Iteratively handles the retrieval of ALL prerequisite courses for a given course_id from Neo4j database. DO NOT use unless you are retrieving ALL prerequisites. Otherwise, just use '(Accurate) Gets immediate prerequisites'.",
+        func=iterative_get_prerequisites,
+        args_schema=CourseIDInput,
+    ),
+    Tool.from_function(
         name="PDF Course Catalog Search",
         description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
         func=pdf_qa_tool,
@@ -72,11 +89,6 @@ unused_tool = """
         name="Course Description Search",  
         description="For when you need to find information about course content based on a description",
         func=get_course_description, 
-    ),
-    Tool.from_function(
-        name="PDF Course Catalog Search",
-        description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
-        func=pdf_qa_tool,
     )
 """
 
@@ -90,7 +102,9 @@ You are an expert UCSD college course advisor providing information about UCSD c
 Be as helpful as possible and return as much information as possible.
 
 Some basic information about UCSD courses to make you more informed:
-- Course id take the form like 'MATH 18' or 'MATH 20C', with all CAPs and space in between department and code.
+- Course id take the form like 'MATH 18' 'MATH 20C' or 'MATH 31CH', with all CAPs and space in between department and code. 
+- Introductory sequences start with lower code number, with 1-99 indicating lower division undergraduate courses, 100-199 indicating upper division undergraduate courses. 200-299 indicating graduate only courses.
+- To request approval of special courses, or to gain permission to enroll even when requirements not all satisfied, students would need to complete an Enrollment Authorization Request ('EASy Request') at 'https://academicaffairs.ucsd.edu/Modules/Students/PreAuth/'
 
 Maximize the use of the accurate retrieval tools; if failed, reflect on why it failed, and then assess what other tools to use.
 Refrain from using your existing pretrained knowledge unless all relevant tools reach empty results. 
