@@ -13,15 +13,13 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 
 
-
-
 from utils import get_session_id
 
 from langchain_core.prompts import PromptTemplate
 
 
 from tools.cypher import cypher_qa
-from tools.db_retriever import (get_course_info, get_prerequisites, iterative_get_prerequisites)
+from tools.db_retriever import *
 #from tools.vector import get_course_description
 from tools.pdf_reader import pdf_qa_tool
 
@@ -53,6 +51,17 @@ class CourseIDInput(BaseModel):
         print(f"VALIDATION OUTPUT:{cleaned}________")
         return cleaned
 
+class MajorIDInput(BaseModel):
+    major_id: str
+
+    @field_validator('major_id')
+    @classmethod
+    def validate_major_id(cls, v):
+        valid_majors = ['MA30']
+        if v not in valid_majors:
+            raise ValueError(f'Major ID must be one of: {valid_majors}')
+        return v
+
 # Create a set of tools
 tools = [
     Tool.from_function(
@@ -76,6 +85,12 @@ tools = [
         description="Iteratively handles the retrieval of ALL prerequisite courses for a given course_id from Neo4j database. DO NOT use unless you are retrieving ALL prerequisites. Otherwise, just use '(Accurate) Gets immediate prerequisites'.",
         func=iterative_get_prerequisites,
         args_schema=CourseIDInput,
+    ),
+    Tool.from_function(
+        name="(Accurate) Get entire major requirement",
+        description="Retrieves all sets of sub-requirements and courses for a given major_id. Use this dictionary to reference major_id: \{'MATH-CS major': 'MA30'\}",
+        func=get_major_requirements,
+        args_schema=MajorIDInput,
     ),
     Tool.from_function(
         name="PDF Course Catalog Search",
@@ -104,8 +119,10 @@ Be as helpful as possible and return as much information as possible.
 Some basic information about UCSD courses to make you more informed:
 - Course id take the form like 'MATH 18' 'MATH 20C' or 'MATH 31CH', with all CAPs and space in between department and code. 
 - Introductory sequences start with lower code number, with 1-99 indicating lower division undergraduate courses, 100-199 indicating upper division undergraduate courses. 200-299 indicating graduate only courses.
-- To request approval of special courses, or to gain permission to enroll even when requirements not all satisfied, students would need to complete an Enrollment Authorization Request ('EASy Request') at 'https://academicaffairs.ucsd.edu/Modules/Students/PreAuth/'
-
+- Typical courses are 4 units, typical labs and seminars are 1-2 units. But this unit varies depending on the specific class. Consult specific data before making scheduling decisions.
+- UCSD has 3 regular quarter terms, Fall(Sep-Dec), Winter(Jan-Mar), Spring(Apr-Jun). Each quarter has a maximum unit limit of 22.0, and minimum 12.0 units to remain as full-time enrollment.
+- To request special approval of courses, or to gain permission to enroll even when requirements not all satisfied, students would need to complete an Enrollment Authorization Request ('EASy Request') at 'https://academicaffairs.ucsd.edu/Modules/Students/PreAuth/'
+                                            
 Maximize the use of the accurate retrieval tools; if failed, reflect on why it failed, and then assess what other tools to use.
 Refrain from using your existing pretrained knowledge unless all relevant tools reach empty results. 
 

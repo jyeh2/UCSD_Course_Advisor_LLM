@@ -95,3 +95,100 @@ def iterative_get_prerequisites(course_id):
             prereqs.append(f"{current_course}: {' and '.join(subprereq_strings)}")
     
     return '\n'.join(prereqs)
+
+def get_major_requirements(major_id):
+    requirements = {}
+
+    # First query: Get direct course requirements
+    direct_query = """
+    MATCH (major:Milestone {milestone_id: $major_id})
+    MATCH (div:Milestone)-[:REQUIRED]->(major)
+    MATCH (require:Milestone)-[:REQUIRED]->(div)
+    MATCH (c:Course)-[:INCLUDED_IN]->(require)
+    RETURN major.title as major, major.description, 
+        div.milestone_id as division, div.description,
+        require.title as requirement, require.description, require.units_required as units_needed,
+        collect(c.course_id) as select_from_courses
+    """
+
+    # Process direct course requirements
+    direct_results = graph.query(direct_query, params={"major_id": major_id})
+    
+    record = direct_results[0]
+    requirements['major ID'] = major_id
+    requirements['title'] = record['major']
+    requirements['description'] = record['major.description']
+    requirements['curriculum'] = []
+
+    for record in direct_results:
+        current_div = record['division']
+        # find division
+        if not any(div['division']==current_div for div in requirements['curriculum']):
+            requirements['curriculum'].append({
+                'division': current_div, 
+                'description': record['div.description'], 
+                'requirements': []
+            })
+        
+        # set units as needed criteria
+        if record['units_needed']==0:
+            needed = 'one course'
+        else:
+            needed = f"{record['units_needed']} units"
+
+        for div in requirements['curriculum']:
+            if div['division']==current_div:
+                div['requirements'].append({
+                    'study': record['requirement'], 
+                    'description': record['require.description'],
+                    'needed to satisfy': needed,
+                    'select from': record['select_from_courses']
+                })
+    
+    # Second query: Get OR group requirements
+    or_group_query = """
+    MATCH (major:Milestone {milestone_id: $major_id})
+    MATCH (div:Milestone)-[:REQUIRED]->(major)
+    MATCH (require:Milestone)-[:REQUIRED]->(div)
+    MATCH (og:OrGroup)-[:INCLUDED_IN]->(require)
+    MATCH (c:Course)-[:REQUIRED]->(og)
+    RETURN major.title as major, major.description, 
+        div.milestone_id as division, div.description,
+        require.title as requirement, require.description, require.units_required as units_needed,
+        og.group_id as path,
+        collect(c.course_id) as select_from_courses
+    """
+    
+    # Process requirements with sequence options
+    or_group_results = graph.query(or_group_query, params={"major_id": major_id})
+    for record in or_group_results:
+        current_div = record['division']
+        # find division
+        if not any(div['division']==current_div for div in requirements['curriculum']):
+            requirements['curriculum'].append({
+                'division': current_div, 
+                'description': record['div.description'], 
+                'requirements': []
+            })
+        
+        # since sequences are being offered, no units requirement are here
+        needed = 'one sequence path'
+
+        # check if current division is recorded
+        for div in requirements['curriculum']:
+            if div['division']==current_div:
+                current_requirement = record['requirement']
+                # check if current requirement is recorded
+                if not any(study['study']==current_requirement for study in div['requirements']):
+                    div['requirements'].append({
+                        'study': record['requirement'], 
+                        'description': record['require.description'],
+                        'needed to satisfy': needed,
+                        'select from': []
+                    })
+                
+                for study in div['requirements']:
+                    if study['study']==current_requirement:
+                        study['select from'].append(tuple(record['select_from_courses']))
+    
+    return requirements
