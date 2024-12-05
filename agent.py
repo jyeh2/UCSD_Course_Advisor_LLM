@@ -21,7 +21,7 @@ from langchain_core.prompts import PromptTemplate
 
 
 from tools.cypher import cypher_qa
-from tools.db_retriever import (get_course_info, get_prerequisites, iterative_get_prerequisites)
+from tools.db_retriever import (get_course_info, get_prerequisites, iterative_get_prerequisites, get_courses_by_milestone)
 #from tools.vector import get_course_description
 from tools.pdf_reader import pdf_qa_tool
 
@@ -81,7 +81,12 @@ tools = [
         name="PDF Course Catalog Search",
         description="Search through UCSD course catalogs (CSE and Math) for detailed course information and requirements",
         func=pdf_qa_tool,
-    )
+    ),
+    Tool.from_function(
+        name="Major Requirement",
+        description="Provided required courses to complete in order to graduate for a major",
+        func=get_courses_by_milestone,
+    ),
 ]
 
 unused_tool = """
