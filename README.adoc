@@ -1,15 +1,18 @@
 = Building an Neo4j-backed Course Advisor using Python
 
-This RAG finetuned chatbot will serve in place of a academic advisor, and provide any details relevant to the MATH-CS major at University of California, San Diego.
+This RAG finetuned chatbot will serve in place of a academic advisor, and provide any details relevant to course selection and major path at University of California, San Diego.
 
-Most of the data processing, as well as the processing is done in the jupyternote-book file. 
+Data has been scraped and processed from UCSD department catalogs and major requirements pages.
+
+(Currently, our database only consists of courses from the MATH and CSE department, and the requirements path of the Math-CS (MA30) major.)
 
 This repository accompanies the link:https://graphacademy.neo4j.com/courses/llm-chatbot-python/?ref=github[Build an Neo4j-backed Chatbot using Python^] course on link:https://graphacademy.neo4j.com/?ref=github[Neo4j GraphAcademy^].
 
 == Setup
-If you are UCSD affilated, the data files should be accompanied in gradescope, as well as the tokens requried to access the database
-Unzip the data folder and put it in the home directory
-Find ```secrets.toml``` file and put it in the folder streamlit.py
+Unzip the data folder and place it in the same directory as neo4j_db_populate.ipynb (root directory)
+
+If you are UCSD affilated, you will find the datasets on Gradescope. You will also find a set of necessary API keys to access the LLM functions and database queries in our submission. 
+Please (1) create a  ```secrets.toml``` file, (2) paste in the API keys, and (3) place the file in the folder ```streamlit.py```
 
 To run the application, you must install the libraries listed in `requirements.txt`.
 
@@ -19,7 +22,7 @@ pip install -r requirements.txt
 == Populating the Database
 If you are not UCSD affilated, and is trying to set up the project. 
 Please contact me in private for DATA files required to populate the neo4j database, and run the finetuning process.
-You will need to supply your own tokens :( 
+You will need to supply your own tokens
 
 == Running the application
 Run `streamlit run` command to start the app on link:http://localhost:8501/[http://localhost:8501/^].
@@ -27,5 +30,14 @@ Run `streamlit run` command to start the app on link:http://localhost:8501/[http
 [source,sh]
 streamlit run bot.py
 
-
-
+== Files Description
+- bot.py: main file for launching the application, holds all code relevant to the streamlit interface
+- agent.py: specifies the langchain agent used to manage our LLM inputs, includes prompting
+- tools: folder containing custom function tools that are made available to the langchain agent. Include functions that query from the Neo4j database.
+- graph.py: defines Neo4j graph database access
+- llm.py: defines OpenAI model selection
+- utils.py: helper function for streamlit UI
+- data.zip: contains all source data
+- neo4j_db_populate.ipynb: notebook used to populate empty database. Run this after resetting or starting from an empty database.
+- Databse_and_prototyping.ipynb: notebook containing all experimental preprocessing code
+- tools_tester.py: development testing playground
